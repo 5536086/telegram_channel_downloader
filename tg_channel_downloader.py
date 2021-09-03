@@ -109,14 +109,14 @@ async def worker(name):
                 await proc.wait()
                 if proc.returncode == 0:
                     print(f"{get_local_time()} - {file_name} 下载并上传完成")
-        except asyncio.TimeoutError:
+        except (errors.rpc_errors_re.FileReferenceExpiredError, asyncio.TimeoutError):
             logging.warning(f'{get_local_time()} - {file_name} 出现异常，重新尝试下载！')
             async for new_message in client.iter_messages(entity=entity, offset_id=message.id - 1, reverse=True,
                                                           limit=1):
                 await queue.put((new_message, chat_title, entity, file_name))
         except Exception as e:
-            print(f"{get_local_time()} - {file_name} {type(e).__class__} {e}")
-            await bot.send_message(admin_id, f'{type(e).__class__}!\n\n{e}\n\n{file_name}')
+            print(f"{get_local_time()} - {file_name} {e.__class__} {e}")
+            await bot.send_message(admin_id, f'{e.__class__}!\n\n{e}\n\n{file_name}')
         finally:
             queue.task_done()
             # 无论是否上传成功都删除文件。
@@ -153,7 +153,7 @@ async def handler(update):
             await update.reply(f'开始从 {chat_title} 的第 {0} 条消息下载')
         except Exception as e:
             await update.reply('chat输入错误，请输入频道或群组的链接\n\n'
-                               f'错误类型：{type(e).__class__}'
+                               f'错误类型：{e.__class__}'
                                f'异常消息：{e}')
             return
     elif len(text) == 3:
